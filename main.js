@@ -123,6 +123,7 @@ function init() {
 
     // Add orbit controls for interaction
     controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 1, 0); // Set initial target to an estimated center
     controls.minDistance = 2;
     controls.maxDistance = 10;
     controls.enableDamping = true;
@@ -230,6 +231,11 @@ function loadModel() {
             // Add the model to the scene
             scene.add(model);
             
+            // Set the orbit controls target to the model's center for better rotation
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            controls.target.copy(center);
+            
             // Hide loading screen
             document.getElementById('loading').style.display = 'none';
             
@@ -249,123 +255,70 @@ function loadModel() {
     );
 }
 
-// Create a text panel to display when inside the crystal
-function createTextPanel() {
-    // Create a plane for the text panel
-    const panelGeometry = new THREE.PlaneGeometry(3, 2);
-    
-    // Create canvas for the text
-    const canvas = document.createElement('canvas');
-    canvas.width = 1200;
-    canvas.height = 800;
-    const context = canvas.getContext('2d');
-    
-    // Clear canvas completely
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Fill with solid blue background
-    context.fillStyle = 'rgba(0, 20, 80, 0.9)';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Add clean border
-    context.strokeStyle = '#4488ff';
-    context.lineWidth = 10;
-    context.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
-    
-    // Add heading - well spaced
-    context.fillStyle = '#ffffff';
-    context.font = 'bold 60px Arial';
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.fillText('Crystal King', canvas.width / 2, 100);
-    
-    // Add text with ample spacing
-    context.font = '36px Arial';
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    
-    // Carefully position each line with plenty of space
-    context.fillText('This magnificent crystal chess piece represents power and clarity.', canvas.width / 2, 250);
-    context.fillText('Crafted with precision, it symbolizes strategic thinking and foresight.', canvas.width / 2, 350);
-    context.fillText('The transparency of the crystal reflects the clarity of mind needed in chess.', canvas.width / 2, 450);
-    context.fillText('As light passes through it, wisdom and enlightenment are revealed.', canvas.width / 2, 550);
-    
-    // Create texture from canvas
-    const texture = new THREE.CanvasTexture(canvas);
-    const material = new THREE.MeshBasicMaterial({ 
-        map: texture,
-        transparent: true,
-        side: THREE.DoubleSide,
-        opacity: 0.95
+// Initialize inner content interaction
+function initInnerContent() {
+    // Set up the back button event listener for the inner content page
+    document.getElementById('back-button').addEventListener('click', function() {
+        const innerContent = document.getElementById('inner-content');
+        
+        // Fade out and hide the inner content
+        innerContent.style.opacity = '0';
+        
+        setTimeout(() => {
+            innerContent.style.display = 'none';
+            
+            // Return the model to its original scale
+            anime({
+                targets: model.scale,
+                x: 1.2,
+                y: 1.2,
+                z: 1.2,
+                duration: 1000,
+                easing: 'easeOutExpo',
+                complete: function() {
+                    // Return camera to original position
+                    anime({
+                        targets: camera.position,
+                        x: originalCameraPosition.x,
+                        y: originalCameraPosition.y,
+                        z: originalCameraPosition.z,
+                        duration: 800,
+                        easing: 'easeInOutQuad',
+                        complete: function() {
+                            // Re-enable controls and reset flags
+                            controls.enabled = true;
+                            isInsideModel = false;
+                            
+                            // Show click hint again
+                            document.getElementById('click-hint').style.display = 'block';
+                            
+                            // Fade in light helpers
+                            lightHelpers.forEach(helper => {
+                                anime({
+                                    targets: helper.material,
+                                    opacity: 1,
+                                    duration: 800,
+                                    easing: 'easeInQuad'
+                                });
+                                helper.material.transparent = true;
+                            });
+                        }
+                    });
+                }
+            });
+        }, 500);
     });
-    
-    // Create mesh and add to scene (initially hidden)
-    textPanel = new THREE.Mesh(panelGeometry, material);
-    textPanel.position.set(0, 0.5, -1); // Position it closer for better visibility
-    textPanel.visible = false;
-    scene.add(textPanel);
-    
-    // Create back button
-    createBackButton();
 }
 
-// Create a back button to return from inside view
+// No longer needed, but keeping function names to avoid errors
+function createTextPanel() {
+    // This function is now just initializing the inner content
+    initInnerContent();
+}
+
+// No longer needed as we're using HTML button
 function createBackButton() {
-    const buttonGeometry = new THREE.PlaneGeometry(0.8, 0.4);
-    
-    // Create canvas for the button
-    const canvas = document.createElement('canvas');
-    canvas.width = 400;
-    canvas.height = 200;
-    const context = canvas.getContext('2d');
-    
-    // Clear canvas completely
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Create solid background
-    context.fillStyle = 'rgba(50, 50, 180, 0.95)';
-    
-    // Draw rounded rectangle
-    const radius = 30;
-    context.beginPath();
-    context.moveTo(radius, 0);
-    context.lineTo(canvas.width - radius, 0);
-    context.arcTo(canvas.width, 0, canvas.width, radius, radius);
-    context.lineTo(canvas.width, canvas.height - radius);
-    context.arcTo(canvas.width, canvas.height, canvas.width - radius, canvas.height, radius);
-    context.lineTo(radius, canvas.height);
-    context.arcTo(0, canvas.height, 0, canvas.height - radius, radius);
-    context.lineTo(0, radius);
-    context.arcTo(0, 0, radius, 0, radius);
-    context.closePath();
-    context.fill();
-    
-    // Add solid border
-    context.strokeStyle = '#ffffff';
-    context.lineWidth = 8;
-    context.stroke();
-    
-    // Add text - large and clear
-    context.fillStyle = '#ffffff';
-    context.font = 'bold 60px Arial';
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.fillText('BACK', canvas.width / 2, canvas.height / 2);
-    
-    // Create texture from canvas
-    const texture = new THREE.CanvasTexture(canvas);
-    const material = new THREE.MeshBasicMaterial({ 
-        map: texture,
-        transparent: true,
-        side: THREE.DoubleSide,
-        opacity: 1.0
-    });
-    
-    // Create mesh and add to scene (initially hidden)
-    backButton = new THREE.Mesh(buttonGeometry, material);
-    backButton.position.set(0, -1.2, -1); // Position below text panel and at the same distance
-    backButton.visible = false;
-    scene.add(backButton);
+    // Empty function to maintain compatibility
 }
 
 // Handle click events for model interaction
@@ -412,28 +365,29 @@ function onModelClick(event) {
                 x: center.x,
                 y: center.y,
                 z: center.z + 2, // Position in front of model
-                duration: 1200,
+                duration: 800, // Shorter duration for quicker transition
                 easing: 'easeInOutQuad',
                 update: () => camera.lookAt(center),
                 complete: function() {
-                    // Expand the model
+                    // Start expanding the model slightly
                     anime({
                         targets: model.scale,
-                        x: 25,
-                        y: 25,
-                        z: 25,
-                        duration: 1800,
+                        x: 5,
+                        y: 5,
+                        z: 5,
+                        duration: 700, // Shorter expansion
                         easing: 'easeOutExpo',
                         complete: function() {
-                            // Set final camera position inside the model
-                            camera.position.set(center.x, center.y, center.z);
-                            camera.lookAt(center.x, center.y, center.z - 5);
+                            // Show the inner content page
+                            const innerContent = document.getElementById('inner-content');
+                            innerContent.style.display = 'flex';
+                            innerContent.style.opacity = '0';
                             
-                            // Show text panel and back button
-                            textPanel.position.set(center.x, center.y, center.z - 1.5);
-                            backButton.position.set(center.x, center.y - 1.2, center.z - 1.5);
-                            textPanel.visible = true;
-                            backButton.visible = true;
+                            // Use setTimeout to trigger CSS transition
+                            setTimeout(() => {
+                                innerContent.style.opacity = '1';
+                                innerContent.classList.add('fade-in');
+                            }, 10);
                         }
                     });
                 }
@@ -448,70 +402,6 @@ function onModelClick(event) {
                     easing: 'easeOutQuad'
                 });
                 helper.material.transparent = true;
-            });
-        }
-    } else {
-        // Check if we clicked the back button
-        const intersects = raycaster.intersectObject(backButton);
-        
-        if (intersects.length > 0) {
-            // Immediately hide text panel and back button
-            textPanel.visible = false;
-            backButton.visible = false;
-
-            // Get the model's center
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            
-            // Move camera to a position where we can see the shrinking model
-            anime({
-                targets: camera.position,
-                x: center.x,
-                y: center.y,
-                z: center.z + 2,
-                duration: 800,
-                easing: 'easeInOutQuad',
-                update: () => camera.lookAt(center),
-                complete: function() {
-                    // Shrink the model back to original size
-                    anime({
-                        targets: model.scale,
-                        x: 1.2,
-                        y: 1.2,
-                        z: 1.2,
-                        duration: 1200,
-                        easing: 'easeInExpo',
-                        complete: function() {
-                            // Return camera to original position
-                            anime({
-                                targets: camera.position,
-                                x: originalCameraPosition.x,
-                                y: originalCameraPosition.y,
-                                z: originalCameraPosition.z,
-                                duration: 1000,
-                                easing: 'easeInOutQuad',
-                                complete: function() {
-                                    // Re-enable controls and reset flags
-                                    controls.enabled = true;
-                                    isInsideModel = false;
-                                    
-                                    // Show click hint again
-                                    document.getElementById('click-hint').style.display = 'block';
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-            
-            // Fade in light helpers
-            lightHelpers.forEach(helper => {
-                anime({
-                    targets: helper.material,
-                    opacity: 1,
-                    duration: 1000,
-                    easing: 'easeInQuad'
-                });
             });
         }
     }
@@ -583,17 +473,8 @@ function animate() {
     // Update orbit controls
     controls.update();
     
-    // If we're inside the model, make the panels face the camera
-    if (isInsideModel && textPanel.visible) {
-        // Only update the orientation, not the position
-        // Use a fixed position in front of the camera for stability
-        textPanel.lookAt(camera.position);
-        backButton.lookAt(camera.position);
-        
-        // Keep text panel and button at a consistent distance
-        textPanel.position.set(0, 0.5, camera.position.z - 1);
-        backButton.position.set(0, -1.2, camera.position.z - 1);
-    }
+    // We no longer need to update text panel positioning
+    // since we're using HTML for the inner content
     
     // Render the scene
     renderer.render(scene, camera);
