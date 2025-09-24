@@ -390,6 +390,10 @@ function onModelClick(event) {
         const intersects = raycaster.intersectObject(model, true);
         
         if (intersects.length > 0) {
+            // Get the model's bounding box
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            
             // Store original camera position for returning later
             originalCameraPosition = camera.position.clone();
             
@@ -402,33 +406,34 @@ function onModelClick(event) {
             // Hide the click hint
             document.getElementById('click-hint').style.display = 'none';
             
-            // First move the camera towards the model (at a better height)
+            // Animate camera to the center of the model
             anime({
                 targets: camera.position,
-                x: 0,
-                y: 0.5, // Better camera height to avoid zooming into the bottom
-                z: 2, // Position in front of model
-                duration: 1000,
+                x: center.x,
+                y: center.y,
+                z: center.z + 2, // Position in front of model
+                duration: 1200,
                 easing: 'easeInOutQuad',
+                update: () => camera.lookAt(center),
                 complete: function() {
-                    // Then expand the model from its center
+                    // Expand the model
                     anime({
                         targets: model.scale,
-                        x: 20,
-                        y: 20,
-                        z: 20,
-                        duration: 1500,
-                        easing: 'easeInOutQuad',
+                        x: 25,
+                        y: 25,
+                        z: 25,
+                        duration: 1800,
+                        easing: 'easeOutExpo',
                         complete: function() {
-                            // Reset camera to a centered position inside the model at proper height
-                            camera.position.set(0, 0.5, 0); // Set camera at better height
-                            camera.lookAt(0, 0.5, -5); // Look straight ahead at same height
+                            // Set final camera position inside the model
+                            camera.position.set(center.x, center.y, center.z);
+                            camera.lookAt(center.x, center.y, center.z - 5);
                             
-                            // Show text panel and back button with slight delay
-                            setTimeout(() => {
-                                textPanel.visible = true;
-                                backButton.visible = true;
-                            }, 200);
+                            // Show text panel and back button
+                            textPanel.position.set(center.x, center.y, center.z - 1.5);
+                            backButton.position.set(center.x, center.y - 1.2, center.z - 1.5);
+                            textPanel.visible = true;
+                            backButton.visible = true;
                         }
                     });
                 }
@@ -453,15 +458,20 @@ function onModelClick(event) {
             // Immediately hide text panel and back button
             textPanel.visible = false;
             backButton.visible = false;
+
+            // Get the model's center
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
             
             // Move camera to a position where we can see the shrinking model
             anime({
                 targets: camera.position,
-                x: 0,
-                y: 0.5, // Match entry height for consistency
-                z: 2,
+                x: center.x,
+                y: center.y,
+                z: center.z + 2,
                 duration: 800,
                 easing: 'easeInOutQuad',
+                update: () => camera.lookAt(center),
                 complete: function() {
                     // Shrink the model back to original size
                     anime({
@@ -470,7 +480,7 @@ function onModelClick(event) {
                         y: 1.2,
                         z: 1.2,
                         duration: 1200,
-                        easing: 'easeInOutQuad',
+                        easing: 'easeInExpo',
                         complete: function() {
                             // Return camera to original position
                             anime({
