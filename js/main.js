@@ -184,6 +184,7 @@ function animateModel() {
             loop: true
         });
         
+        /*
         // Add a subtle floating animation
         anime({
             targets: model.position,
@@ -192,6 +193,7 @@ function animateModel() {
             easing: 'easeInOutQuad',
             loop: true
         });
+        */
     }
 }
 
