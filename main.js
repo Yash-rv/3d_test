@@ -123,7 +123,7 @@ function init() {
 
     // Add orbit controls for interaction
     controls = new OrbitControls(camera, renderer.domElement);
-    controls.target.set(0, 1, 0); // Set initial target to an estimated center
+    controls.target.set(0, 0, 0); // Set initial target to the origin
     controls.minDistance = 2;
     controls.maxDistance = 10;
     controls.enableDamping = true;
@@ -231,10 +231,8 @@ function loadModel() {
             // Add the model to the scene
             scene.add(model);
             
-            // Set the orbit controls target to the model's center for better rotation
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            controls.target.copy(center);
+            // Set the orbit controls target to the origin (0,0,0) since that's where the model's center is now
+            controls.target.set(0, 0, 0);
             
             // Hide loading screen
             document.getElementById('loading').style.display = 'none';
@@ -343,9 +341,8 @@ function onModelClick(event) {
         const intersects = raycaster.intersectObject(model, true);
         
         if (intersects.length > 0) {
-            // Get the model's bounding box
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
+            // Since the model's origin is now at the center, we'll use the origin (0,0,0)
+            const center = new THREE.Vector3(0, 0, 0);
             
             // Store original camera position for returning later
             originalCameraPosition = camera.position.clone();
@@ -359,12 +356,12 @@ function onModelClick(event) {
             // Hide the click hint
             document.getElementById('click-hint').style.display = 'none';
             
-            // Animate camera to the center of the model
+            // Animate camera to the center of the model (true origin)
             anime({
                 targets: camera.position,
-                x: center.x,
-                y: center.y,
-                z: center.z + 2, // Position in front of model
+                x: 0,
+                y: 0,
+                z: 2, // Position in front of model
                 duration: 800, // Shorter duration for quicker transition
                 easing: 'easeInOutQuad',
                 update: () => camera.lookAt(center),
