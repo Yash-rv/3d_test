@@ -265,42 +265,31 @@ function initInnerContent() {
         setTimeout(() => {
             innerContent.style.display = 'none';
             
-            // Return the model to its original scale
+            // Return camera to original position (without scaling the model)
             anime({
-                targets: model.scale,
-                x: 1.2,
-                y: 1.2,
-                z: 1.2,
-                duration: 1000,
-                easing: 'easeOutExpo',
+                targets: camera.position,
+                x: originalCameraPosition.x,
+                y: originalCameraPosition.y,
+                z: originalCameraPosition.z,
+                duration: 800,
+                easing: 'easeInOutQuad',
                 complete: function() {
-                    // Return camera to original position
-                    anime({
-                        targets: camera.position,
-                        x: originalCameraPosition.x,
-                        y: originalCameraPosition.y,
-                        z: originalCameraPosition.z,
-                        duration: 800,
-                        easing: 'easeInOutQuad',
-                        complete: function() {
-                            // Re-enable controls and reset flags
-                            controls.enabled = true;
-                            isInsideModel = false;
-                            
-                            // Show click hint again
-                            document.getElementById('click-hint').style.display = 'block';
-                            
-                            // Fade in light helpers
-                            lightHelpers.forEach(helper => {
-                                anime({
-                                    targets: helper.material,
-                                    opacity: 1,
-                                    duration: 800,
-                                    easing: 'easeInQuad'
-                                });
-                                helper.material.transparent = true;
-                            });
-                        }
+                    // Re-enable controls and reset flags
+                    controls.enabled = true;
+                    isInsideModel = false;
+                    
+                    // Show click hint again
+                    document.getElementById('click-hint').style.display = 'block';
+                    
+                    // Fade in light helpers
+                    lightHelpers.forEach(helper => {
+                        anime({
+                            targets: helper.material,
+                            opacity: 1,
+                            duration: 800,
+                            easing: 'easeInQuad'
+                        });
+                        helper.material.transparent = true;
                     });
                 }
             });
@@ -359,34 +348,23 @@ function onModelClick(event) {
             // Animate camera to the center of the model (true origin)
             anime({
                 targets: camera.position,
-                x: 0,
-                y: 0,
-                z: 2, // Position in front of model
+                x: 0.4,
+                y: 0.2,
+                z: 0, // Position in front of model
                 duration: 800, // Shorter duration for quicker transition
                 easing: 'easeInOutQuad',
                 update: () => camera.lookAt(center),
                 complete: function() {
-                    // Start expanding the model slightly
-                    anime({
-                        targets: model.scale,
-                        x: 5,
-                        y: 5,
-                        z: 5,
-                        duration: 700, // Shorter expansion
-                        easing: 'easeOutExpo',
-                        complete: function() {
-                            // Show the inner content page
-                            const innerContent = document.getElementById('inner-content');
-                            innerContent.style.display = 'flex';
-                            innerContent.style.opacity = '0';
-                            
-                            // Use setTimeout to trigger CSS transition
-                            setTimeout(() => {
-                                innerContent.style.opacity = '1';
-                                innerContent.classList.add('fade-in');
-                            }, 10);
-                        }
-                    });
+                    // Show the inner content page (without expanding the model)
+                    const innerContent = document.getElementById('inner-content');
+                    innerContent.style.display = 'flex';
+                    innerContent.style.opacity = '0';
+                    
+                    // Use setTimeout to trigger CSS transition
+                    setTimeout(() => {
+                        innerContent.style.opacity = '1';
+                        innerContent.classList.add('fade-in');
+                    }, 10);
                 }
             });
             
@@ -415,7 +393,8 @@ function animateModel() {
             loop: true
         });
         
-        // Add a subtle floating animation
+        // Removing floating animation to keep model centered
+        /*
         anime({
             targets: model.position,
             y: [0, 0.1, 0],
@@ -423,6 +402,7 @@ function animateModel() {
             easing: 'easeInOutQuad',
             loop: true
         });
+        */
     }
 }
 
