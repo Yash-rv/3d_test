@@ -1,16 +1,47 @@
 import React, { useRef, useEffect, useState } from 'react'
-import { useFrame, useThree } from '@react-three/fiber'
+import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 
 // Minimal GLTF type for loader callback
 type GLTF = { scene: THREE.Group }
 import { OrbitControls } from '@react-three/drei'
+import { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 
 const ChessScene: React.FC = () => {
   const chessboardRef = useRef<THREE.Group>(null)
+  const controlsRef = useRef<OrbitControlsImpl>(null!)
   const { camera } = useThree()
   const [isLoaded, setIsLoaded] = useState(false)
+  
+  // Add keyboard event listener for capturing camera position
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === 'l') {
+        // Capture and print camera position and target
+        const position = camera.position.clone();
+        const target = new THREE.Vector3(0, 0, 0);
+        if (controlsRef.current) {
+          target.copy(controlsRef.current.target);
+        }
+        
+        console.log('Camera position captured:');
+        console.log(`Position: { x: ${position.x.toFixed(2)}, y: ${position.y.toFixed(2)}, z: ${position.z.toFixed(2)} }`);
+        console.log(`LookAt: { x: ${target.x.toFixed(2)}, y: ${target.y.toFixed(2)}, z: ${target.z.toFixed(2)} }`);
+        
+        // If chessboard is loaded, also log its rotation
+        if (chessboardRef.current) {
+          const rotation = chessboardRef.current.rotation;
+          console.log(`Chessboard rotation: { x: ${rotation.x.toFixed(2)}, y: ${rotation.y.toFixed(2)}, z: ${rotation.z.toFixed(2)} }`);
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [camera])
 
   useEffect(() => {
     // Load the full chessboard with pieces
@@ -20,6 +51,8 @@ const ChessScene: React.FC = () => {
     (gltf: GLTF) => {
       const model = gltf.scene
       model.scale.set(100, 100, 100) // Smaller scale for closer viewing
+      // Rotate to face the front view
+      model.rotation.y = 0.00 // Precise captured rotation value
       // Create crystal material for all pieces and board
       model.traverse((node: any) => {
         if (node.isMesh && node.material) {
@@ -47,7 +80,7 @@ const ChessScene: React.FC = () => {
       }
     },
     undefined,
-    (error) => {
+    (error: any) => {
       console.error('Error loading GLB:', error)
     }
   )
@@ -60,26 +93,49 @@ const ChessScene: React.FC = () => {
 
   useEffect(() => {
     if (isLoaded) {
-      // Animation moving towards the board
+      // Animation moving towards the exact captured camera position
       let startTime = Date.now()
       const animate = () => {
         const t = Math.min((Date.now() - startTime) / 5000, 1) // Slower animation (5 seconds)
         const easeT = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
 
-        // Move from far to close
-        const height = 300 - (250 * easeT) // Move down from 300 to 50
-        const radius = 200 - (150 * easeT) // Spiral inward from 200 to 50
-        const angle = easeT * Math.PI * 2 // Full rotation while moving in
+        // Start position
+        const startPos = new THREE.Vector3(200, 300, 200)
+        
+        // End position - exactly as captured coordinates
+        const endPos = new THREE.Vector3(-9.88, 13.85, -13.91)
+        
+        // Look target - exactly as captured
+        const startLookAt = new THREE.Vector3(0, 0, 0)
+        const endLookAt = new THREE.Vector3(-7.43, -30.92, 75.47)
 
-        camera.position.set(
-          Math.sin(angle) * radius,
-          height,
-          Math.cos(angle) * radius
-        )
-        // Gradually look up at the pieces as we get closer
-        camera.lookAt(0, easeT * 30, 0) // Start at board level, move up to pieces
+        if (t >= 1) {
+          // Hard-set the position and lookAt to ensure absolute precision
+          camera.position.set(-9.88, 13.85, -13.91);
+          camera.lookAt(-7.43, -30.92, 75.47);
+          
+          if (controlsRef.current) {
+            controlsRef.current.target.set(-7.43, -30.92, 75.47);
+          }
+          
+          // Also ensure the model rotation is exactly as specified
+          if (chessboardRef.current) {
+            chessboardRef.current.rotation.set(0, 0, 0);
+          }
+          
+          // Animation complete, no need to continue
+          return;
+        } else {
+          // Use interpolation during animation
+          const newPos = startPos.clone().lerp(endPos, easeT)
+          camera.position.copy(newPos)
 
-        if (t < 1) {
+          const newLookAt = startLookAt.clone().lerp(endLookAt, easeT)
+          camera.lookAt(newLookAt)
+
+          if (controlsRef.current) {
+            controlsRef.current.target.copy(newLookAt);
+          }
           requestAnimationFrame(animate)
         }
       }
@@ -87,17 +143,8 @@ const ChessScene: React.FC = () => {
     }
   }, [isLoaded, camera])
 
-  // More intimate floating animation
-  useFrame((state, delta) => {
-    if (chessboardRef.current && isLoaded) {
-      // Subtle floating motion that's more noticeable up close
-      const time = state.clock.getElapsedTime()
-      chessboardRef.current.position.y = Math.sin(time * 0.2) * 5 // Very gentle float
-      // Add a slight tilt animation
-      chessboardRef.current.rotation.x = Math.sin(time * 0.15) * 0.02 // Subtle tilt
-      chessboardRef.current.rotation.y += delta * 0.03 // Very slow rotation
-    }
-  })
+  // Removed all continuous animation to keep the board completely still
+  // No more floating, tilting or rotation
 
   return (
     <>
@@ -142,6 +189,7 @@ const ChessScene: React.FC = () => {
 
       {/* Orbit controls: only allow panning with right mouse button */}
       <OrbitControls
+        ref={controlsRef}
         enableDamping
         dampingFactor={0.1}
         enableRotate={true}
