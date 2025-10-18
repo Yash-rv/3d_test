@@ -24,10 +24,11 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background-color: rgba(0, 0, 0, 0.95);
+            background-color: rgba(0, 0, 0, 0.98);
             z-index: 10;
             color: white;
             font-size: 24px;
+            transition: opacity 0.5s ease;
         }
         
         #loading .progress {
@@ -68,20 +69,25 @@
             to { opacity: 1; }
         }
         
-        /* Import Google Fonts */
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        /* Add link to Google Fonts */
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;900&display=swap');
     </style>
 </head>
 <body>
     <div id="loading">
-        <div>Loading Chess Strategy...</div>
+        <div>Loading Chess Experience...</div>
         <div class="progress">
             <div class="progress-bar"></div>
         </div>
     </div>
     
-    <div id="intro-text">Tired of making no online presence?</div>
+    <div id="intro-text">Make Your Strategic Move</div>
     
-    <script type="module" src="fixed_chessboard.js"></script>
+    <script type="module" src="chessboard_new.js"></script>
 </body>
 </html>

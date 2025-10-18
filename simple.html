@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Chessboard</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+        }
+        
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            font-family: Arial, sans-serif;
+            z-index: 1000;
+        }
+        
+        #loading .progress {
+            width: 300px;
+            height: 10px;
+            background-color: #333;
+            margin-top: 20px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        #loading .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #0088ff;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div>Loading Chessboard...</div>
+        <div class="progress">
+            <div class="progress-bar"></div>
+        </div>
+    </div>
+    
+    <script type="module" src="simple_chessboard.js"></script>
+</body>
+</html>

@@ -11,6 +11,8 @@ let isInsideModel = false;
 let originalCameraPosition;
 let textPanel, backButton;
 let lightHelpers = [];
+let crystalFragments = [];
+let isShatteringInProgress = false;
 
 // Initialize the scene
 init();
@@ -265,43 +267,49 @@ function initInnerContent() {
         setTimeout(() => {
             innerContent.style.display = 'none';
             
-            // Return the model to its original scale
+            // Remove all crystal fragments
+            crystalFragments.forEach(fragment => {
+                scene.remove(fragment);
+            });
+            crystalFragments = [];
+            
+            // Make the original model visible again
+            model.visible = true;
+            
+            // Reset model position and rotation
+            model.position.set(0, 0, 0);
+            model.rotation.y = Math.PI / 6; // Reset to initial rotation
+            
+            // Return camera to original position
             anime({
-                targets: model.scale,
-                x: 1.2,
-                y: 1.2,
-                z: 1.2,
-                duration: 1000,
-                easing: 'easeOutExpo',
+                targets: camera.position,
+                x: originalCameraPosition.x,
+                y: originalCameraPosition.y,
+                z: originalCameraPosition.z,
+                duration: 800,
+                easing: 'easeInOutQuad',
                 complete: function() {
-                    // Return camera to original position
-                    anime({
-                        targets: camera.position,
-                        x: originalCameraPosition.x,
-                        y: originalCameraPosition.y,
-                        z: originalCameraPosition.z,
-                        duration: 800,
-                        easing: 'easeInOutQuad',
-                        complete: function() {
-                            // Re-enable controls and reset flags
-                            controls.enabled = true;
-                            isInsideModel = false;
-                            
-                            // Show click hint again
-                            document.getElementById('click-hint').style.display = 'block';
-                            
-                            // Fade in light helpers
-                            lightHelpers.forEach(helper => {
-                                anime({
-                                    targets: helper.material,
-                                    opacity: 1,
-                                    duration: 800,
-                                    easing: 'easeInQuad'
-                                });
-                                helper.material.transparent = true;
-                            });
-                        }
+                    // Re-enable controls and reset flags
+                    controls.enabled = true;
+                    isInsideModel = false;
+                    isShatteringInProgress = false;
+                    
+                    // Show click hint again
+                    document.getElementById('click-hint').style.display = 'block';
+                    
+                    // Fade in light helpers
+                    lightHelpers.forEach(helper => {
+                        anime({
+                            targets: helper.material,
+                            opacity: 1,
+                            duration: 800,
+                            easing: 'easeInQuad'
+                        });
+                        helper.material.transparent = true;
                     });
+                    
+                    // Resume model animation
+                    animateModel();
                 }
             });
         }, 500);
@@ -336,69 +344,79 @@ function onModelClick(event) {
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(mouse, camera);
     
-    if (!isInsideModel) {
+    // Don't process clicks if already shattering
+    if (!isInsideModel && !isShatteringInProgress) {
         // Check if we clicked on the model
         const intersects = raycaster.intersectObject(model, true);
         
         if (intersects.length > 0) {
-            // Since the model's origin is now at the center, we'll use the origin (0,0,0)
-            const center = new THREE.Vector3(0, 0, 0);
-            
             // Store original camera position for returning later
             originalCameraPosition = camera.position.clone();
             
             // Disable orbit controls temporarily
             controls.enabled = false;
             
-            // Animate going inside the model
+            // Set flags
             isInsideModel = true;
+            isShatteringInProgress = true;
             
             // Hide the click hint
             document.getElementById('click-hint').style.display = 'none';
             
-            // Animate camera to the center of the model (true origin)
-            anime({
-                targets: camera.position,
-                x: 0,
-                y: 0,
-                z: 2, // Position in front of model
-                duration: 800, // Shorter duration for quicker transition
-                easing: 'easeInOutQuad',
-                update: () => camera.lookAt(center),
-                complete: function() {
-                    // Start expanding the model slightly
-                    anime({
-                        targets: model.scale,
-                        x: 5,
-                        y: 5,
-                        z: 5,
-                        duration: 700, // Shorter expansion
-                        easing: 'easeOutExpo',
-                        complete: function() {
-                            // Show the inner content page
-                            const innerContent = document.getElementById('inner-content');
-                            innerContent.style.display = 'flex';
-                            innerContent.style.opacity = '0';
-                            
-                            // Use setTimeout to trigger CSS transition
-                            setTimeout(() => {
-                                innerContent.style.opacity = '1';
-                                innerContent.classList.add('fade-in');
-                            }, 10);
-                        }
-                    });
-                }
+            // Create crystal fragments for the shattering effect
+            createCrystalFragments();
+            
+            // First, create a shaking effect to indicate that the crystal is about to break
+            const originalPosition = new THREE.Vector3().copy(model.position);
+            const originalRotation = new THREE.Euler().copy(model.rotation);
+            
+            // Flash the lights dramatically
+            const lights = scene.children.filter(child => child instanceof THREE.PointLight);
+            lights.forEach(light => {
+                anime({
+                    targets: light,
+                    intensity: [light.intensity, light.intensity * 2, light.intensity],
+                    duration: 800,
+                    easing: 'easeInOutQuad'
+                });
             });
             
-            // Fade out light helpers while inside
-            lightHelpers.forEach(helper => {
-                anime({
-                    targets: helper.material,
-                    opacity: 0,
-                    duration: 1000,
-                    easing: 'easeOutQuad'
-                });
-                helper.material.transparent = true;
+            // Shake the model - series of quick, small, random movements
+            anime({
+                targets: {},
+                duration: 800,
+                easing: 'easeInQuad',
+                update: function(anim) {
+                    if (model) {
+                        // Shake more intensely as the animation progresses
+                        const intensity = anim.progress / 100 * 0.06;
+                        
+                        // Apply random offsets to position
+                        model.position.x = originalPosition.x + (Math.random() * 2 - 1) * intensity;
+                        model.position.y = originalPosition.y + (Math.random() * 2 - 1) * intensity;
+                        model.position.z = originalPosition.z + (Math.random() * 2 - 1) * intensity;
+                        
+                        // Apply random offsets to rotation
+                        model.rotation.x = originalRotation.x + (Math.random() * 2 - 1) * intensity * 0.3;
+                        model.rotation.y = originalRotation.y + (Math.random() * 2 - 1) * intensity * 0.3;
+                        model.rotation.z = originalRotation.z + (Math.random() * 2 - 1) * intensity * 0.3;
+                    }
+                },
+                complete: function() {
+                    // After shaking, shatter the crystal
+                    shatterCrystal();
+                    
+                    // Fade out light helpers while inside
+                    lightHelpers.forEach(helper => {
+                        anime({
+                            targets: helper.material,
+                            opacity: 0,
+                            duration: 1000,
+                            easing: 'easeOutQuad'
+                        });
+                        helper.material.transparent = true;
+                    });
+                }
             });
         }
     }
@@ -464,14 +482,181 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+// Function to create crystal fragments for shattering effect
+function createCrystalFragments() {
+    // Remove any existing fragments
+    crystalFragments.forEach(fragment => {
+        scene.remove(fragment);
+    });
+    crystalFragments = [];
+    
+    // Get the model's bounding box to determine size
+    const box = new THREE.Box3().setFromObject(model);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    
+    // Create between 20-30 crystal fragments
+    const fragmentCount = 25;
+    
+    // Create a crystalline material similar to the main model
+    const fragmentMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,
+        metalness: 0.1,
+        roughness: 0.2,
+        transmission: 0.95,
+        transparent: true,
+        opacity: 0.7,
+        thickness: 0.5,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.1,
+        envMapIntensity: 3.0,
+        side: THREE.DoubleSide
+    });
+    
+    // Create fragments based on various basic geometries to simulate broken crystal
+    for (let i = 0; i < fragmentCount; i++) {
+        let geometry;
+        
+        // Create different types of crystal shards
+        const geomType = Math.floor(Math.random() * 5);
+        
+        switch (geomType) {
+            case 0: // Tetrahedron
+                geometry = new THREE.TetrahedronGeometry(0.2 + Math.random() * 0.3);
+                break;
+            case 1: // Diamond-like shape (octahedron)
+                geometry = new THREE.OctahedronGeometry(0.2 + Math.random() * 0.2);
+                break;
+            case 2: // Elongated shard (custom geometry)
+                geometry = new THREE.ConeGeometry(0.1, 0.4 + Math.random() * 0.3, 4);
+                break;
+            case 3: // Flat shard
+                geometry = new THREE.BoxGeometry(
+                    0.05 + Math.random() * 0.1,
+                    0.2 + Math.random() * 0.3,
+                    0.2 + Math.random() * 0.3
+                );
+                break;
+            case 4: // Small crystal chunk
+                geometry = new THREE.IcosahedronGeometry(0.1 + Math.random() * 0.15);
+                break;
+        }
+        
+        // Create the fragment mesh
+        const fragment = new THREE.Mesh(geometry, fragmentMaterial);
+        
+        // Start each fragment at the model's position
+        // with a slight offset to create a more natural break
+        fragment.position.set(
+            model.position.x + (Math.random() * 0.2 - 0.1) * size.x,
+            model.position.y + (Math.random() * 0.2 - 0.1) * size.y,
+            model.position.z + (Math.random() * 0.2 - 0.1) * size.z
+        );
+        
+        // Give each fragment a random rotation
+        fragment.rotation.set(
+            Math.random() * Math.PI,
+            Math.random() * Math.PI,
+            Math.random() * Math.PI
+        );
+        
+        // Store target position for animation (where the fragment will fly to)
+        fragment.userData.targetPosition = new THREE.Vector3(
+            (Math.random() - 0.5) * 10,
+            (Math.random() - 0.5) * 10,
+            (Math.random() - 0.5) * 10
+        );
+        
+        // Store target rotation for animation
+        fragment.userData.targetRotation = new THREE.Vector3(
+            Math.random() * Math.PI * 4,
+            Math.random() * Math.PI * 4,
+            Math.random() * Math.PI * 4
+        );
+        
+        // Store a random speed factor for each fragment
+        fragment.userData.speedFactor = 0.5 + Math.random() * 1.5;
+        
+        // Set fragment to initially be invisible
+        fragment.visible = false;
+        
+        // Add to scene and store in array
+        scene.add(fragment);
+        crystalFragments.push(fragment);
+    }
+}
+
+// Function to animate the crystal shattering effect
+function shatterCrystal() {
+    // Hide the original model
+    model.visible = false;
+    
+    // Make all fragments visible
+    crystalFragments.forEach(fragment => {
+        fragment.visible = true;
+    });
+    
+    // Animate each fragment flying outward
+    crystalFragments.forEach((fragment, index) => {
+        anime({
+            targets: fragment.position,
+            x: fragment.userData.targetPosition.x,
+            y: fragment.userData.targetPosition.y,
+            z: fragment.userData.targetPosition.z,
+            duration: 1500,
+            delay: Math.random() * 200,
+            easing: 'easeOutExpo',
+        });
+        
+        anime({
+            targets: fragment.rotation,
+            x: fragment.userData.targetRotation.x,
+            y: fragment.userData.targetRotation.y,
+            z: fragment.userData.targetRotation.z,
+            duration: 1500,
+            delay: Math.random() * 200,
+            easing: 'easeOutQuad',
+        });
+        
+        // Fade out the fragments
+        anime({
+            targets: fragment.material,
+            opacity: 0,
+            duration: 1000,
+            delay: 500 + Math.random() * 500,
+            easing: 'easeOutQuad',
+            update: function() {
+                // Make sure transparency is enabled
+                fragment.material.transparent = true;
+                fragment.material.needsUpdate = true;
+            }
+        });
+    });
+    
+    // Show inner content after a short delay
+    setTimeout(() => {
+        const innerContent = document.getElementById('inner-content');
+        innerContent.style.display = 'flex';
+        innerContent.style.opacity = '0';
+        
+        // Fade in the content
+        setTimeout(() => {
+            innerContent.style.opacity = '1';
+            innerContent.classList.add('fade-in');
+            
+            // Reset the shattering flag after content is shown
+            setTimeout(() => {
+                isShatteringInProgress = false;
+            }, 500);
+        }, 10);
+    }, 1000);
+}
+
 function animate() {
     requestAnimationFrame(animate);
     
     // Update orbit controls
     controls.update();
-    
-    // We no longer need to update text panel positioning
-    // since we're using HTML for the inner content
     
     // Render the scene
     renderer.render(scene, camera);

@@ -24,10 +24,11 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background-color: rgba(0, 0, 0, 0.95);
+            background-color: rgba(0, 0, 0, 0.98);
             z-index: 10;
             color: white;
             font-size: 24px;
+            transition: opacity 0.5s ease;
         }
         
         #loading .progress {
@@ -57,10 +58,10 @@
             color: white;
             text-shadow: 0 0 20px rgba(0, 100, 255, 0.8);
             opacity: 0;
-            transition: all 0.5s ease;
+            transition: opacity 1s ease-in-out;
             z-index: 5;
             white-space: nowrap;
-            pointer-events: none;
+            pointer-events: none; /* Ensure it doesn't interfere with user interaction */
         }
         
         @keyframes fadeIn {
@@ -68,20 +69,26 @@
             to { opacity: 1; }
         }
         
-        /* Import Google Fonts */
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+        
+        /* Add link to Google Fonts */
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;900&display=swap');
     </style>
 </head>
 <body>
     <div id="loading">
-        <div>Loading Chess Strategy...</div>
+        <div>Loading Chess Experience...</div>
         <div class="progress">
             <div class="progress-bar"></div>
         </div>
     </div>
     
-    <div id="intro-text">Tired of making no online presence?</div>
+    <div id="intro-text">Make Your Strategic Move</div>
     
-    <script type="module" src="fixed_chessboard.js"></script>
+    <script type="module" src="chessboard.js"></script>
 </body>
 </html>
