@@ -8,3 +8,66 @@ canvas {
   width: 100% !important;
   height: 100% !important;
 }
+
+.introduction-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.introduction-content {
+  background-color: rgba(30, 30, 40, 0.95);
+  border-radius: 8px;
+  padding: 2rem;
+  max-width: 600px;
+  width: 90%;
+  color: white;
+  box-shadow: 0 0 30px rgba(100, 100, 255, 0.3);
+  border: 1px solid rgba(100, 100, 255, 0.2);
+  text-align: center;
+}
+
+.introduction-content h1 {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  color: #a0a0ff;
+}
+
+.introduction-content p {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+  font-size: 1.1rem;
+}
+
+.close-button {
+  margin-top: 1.5rem;
+  background-color: #4040a0;
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.close-button:hover {
+  background-color: #5050c0;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
